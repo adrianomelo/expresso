@@ -19,6 +19,7 @@
 
 #include "plugin.h"
 #include "sprite.h"
+#include "rawconnection.h"
 
 
 void ExpressoPlugin::registerTypes(const char *uri)
@@ -27,6 +28,7 @@ void ExpressoPlugin::registerTypes(const char *uri)
     qmlRegisterType<Sprite>(uri, 1, 0, "Sprite");
     qmlRegisterType<SpriteState>(uri, 1, 0, "SpriteState");
     qmlRegisterType<SpriteScene>(uri, 1, 0, "SpriteScene");
+    qmlRegisterType<RawConnection>(uri, 1, 0, "RawConnection");
 }
 
 Q_EXPORT_PLUGIN2(expressoplugin, ExpressoPlugin);

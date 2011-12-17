@@ -5,10 +5,12 @@ TARGET = expresso
 QT += declarative
 
 HEADERS += plugin.h \
-           sprite.h
+           sprite.h \
+           rawconnection.h
 
 SOURCES += plugin.cpp \
-           sprite.cpp
+           sprite.cpp \
+           rawconnection.cpp
 
 QML_SOURCES += qmldir
 
