@@ -7,14 +7,28 @@ QT += declarative
 HEADERS += plugin.h \
            sprite.h \
            expresso.h \
+           pcmsound.h \
            pixmaptext.h \
            rawconnection.h
 
 SOURCES += plugin.cpp \
            sprite.cpp \
            expresso.cpp \
+           pcmsound.cpp \
            pixmaptext.cpp \
            rawconnection.cpp
+
+unix {
+    CONFIG += link_pkgconfig
+    PKGCONFIG += libpulse
+
+    DEFINES += PCMSOUND_PULSE
+
+    HEADERS += $$PWD/pcmsound_pulse.h
+    SOURCES += $$PWD/pcmsound_pulse.cpp
+} else {
+    HEADERS += $$PWD/pcmsound_dummy.h
+}
 
 QML_SOURCES += qmldir
 
