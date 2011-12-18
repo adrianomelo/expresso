@@ -115,6 +115,7 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *options, QWidget *widget = 0);
 
 signals:
+    void advanced();
     void spriteStateChanged();
     void flipHorizontallyChanged();
 
@@ -136,12 +137,15 @@ public:
     bool automaticStep() const;
     void setAutomaticStep(bool enabled);
 
+    void advance(int phase);
+
     void componentComplete();
 
 public slots:
     void tick();
 
 signals:
+    void advanced();
     void automaticStepChanged();
 
 private:

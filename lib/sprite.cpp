@@ -68,6 +68,12 @@ void SpriteScene::componentComplete()
         m_timer.start(q_spriteSceneTick);
 }
 
+void SpriteScene::advance(int phase)
+{
+    if (phase != 0)
+        emit advanced();
+}
+
 
 Sprite::Sprite(QDeclarativeItem *parent)
     : QDeclarativeItem(parent),
@@ -128,15 +134,19 @@ void Sprite::componentComplete()
 
 void Sprite::advance(int phase)
 {
-    if (phase == 0 || !m_state)
+    if (phase == 0)
         return;
 
-    if (m_state->advance()) {
-        update();
-    } else if (m_state->nextState()) {
-        setSpriteState(m_state->nextState());
-        update();
+    if (m_state) {
+        if (m_state->advance()) {
+            update();
+        } else if (m_state->nextState()) {
+            setSpriteState(m_state->nextState());
+            update();
+        }
     }
+
+    emit advanced();
 }
 
 void Sprite::paint(QPainter *painter, const QStyleOptionGraphicsItem *options, QWidget *widget)
