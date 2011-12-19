@@ -22,6 +22,7 @@
 #include "expresso.h"
 #include "pcmsound.h"
 #include "pixmaptext.h"
+#include "imageloader.h"
 #include "rawconnection.h"
 #include "particlesystem.h"
 
@@ -36,6 +37,7 @@ void ExpressoPlugin::registerTypes(const char *uri)
     qmlRegisterType<SpriteScene>(uri, 1, 0, "SpriteScene");
     qmlRegisterType<PcmSound>(uri, 1, 0, "PcmSound");
     qmlRegisterType<PixmapText>(uri, 1, 0, "PixmapText");
+    qmlRegisterType<ImageLoader>(uri, 1, 0, "ImageLoader");
     qmlRegisterType<RawConnection>(uri, 1, 0, "RawConnection");
     qmlRegisterType<ParticleSystem>(uri, 1, 0, "ParticleSystem");
 }
