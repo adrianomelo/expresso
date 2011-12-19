@@ -24,6 +24,7 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <pulse/pulseaudio.h>
 
 struct pa_stream;
 
@@ -72,6 +73,7 @@ private:
     qreal m_volume;
     QByteArray m_data;
     pa_stream *m_stream;
+    pa_sample_spec m_sampleSpec;
 };
 
 #endif

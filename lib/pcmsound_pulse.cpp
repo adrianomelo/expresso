@@ -19,7 +19,7 @@
 
 #include <QFile>
 #include <QCoreApplication>
-#include <pulse/pulseaudio.h>
+
 
 #include "pcmsound_pulse.h"
 
@@ -172,6 +172,10 @@ PulsePcmSound::PulsePcmSound(const WavFile &file, QObject *parent)
 {
     PulseClient *pulse = pulse_instance();
 
+    m_sampleSpec.channels = file.channels();
+    m_sampleSpec.rate = file.sampleRate();
+    m_sampleSpec.format = pa_parse_sample_format("s16le");
+
     if (pulse->isReady())
         onContextReady();
     else
@@ -265,7 +269,7 @@ void PulsePcmSound::createStream()
     PulseLocker locker;
     const char *streamName = QString("PulsePcmSound:%1").arg(::getpid()).toAscii().data();
 
-    if (!(m_stream = pa_stream_new(context, streamName, pulse->sampleSpec(), 0))) {
+    if (!(m_stream = pa_stream_new(context, streamName, &m_sampleSpec, 0))) {
         qWarning("PulsePcmSound: Unable to create stream (%s)", pa_strerror(pa_context_errno(context)));
         qApp->quit();
         return;

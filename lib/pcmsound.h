@@ -33,12 +33,17 @@ public:
     bool isLoaded() const { return m_loaded; }
     QByteArray data() const { return m_data; }
 
+    int channels() const { return m_channels; }
+    int sampleRate() const { return m_sampleRate; }
+
     bool load(const QUrl &url);
 
 private:
     QUrl m_url;
     bool m_loaded;
     QByteArray m_data;
+    int m_channels;
+    int m_sampleRate;
 };
 
 

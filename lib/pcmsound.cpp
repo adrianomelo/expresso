@@ -26,10 +26,12 @@
 #endif
 
 #include <QFile>
-
+#include <QDebug>
 
 WavFile::WavFile()
-    : m_loaded(false)
+    : m_loaded(false),
+      m_channels(1),
+      m_sampleRate(16000)
 {
 
 }
@@ -45,8 +47,38 @@ bool WavFile::load(const QUrl &url)
         return false;
     }
 
-    // XXX: read header info
-    fp.seek(44);
+    struct header {
+        char chunkId[4];
+        quint32 chunkSIze;
+        char format[4];
+        char subChunk1Id[4];
+        quint32 subChunk1Size;
+        quint16 audioFormat;
+        quint16 numChannels;
+        quint32 sampleRate;
+        quint32 byteRate;
+        quint16 blockAlign;
+        quint16 bitsPerSample;
+        char subChunk2Id[4];
+        quint32 subChunk2Size;
+    } header;
+
+    const int sz = sizeof(struct header);
+    if (fp.read(reinterpret_cast<char *>(&header), sz) != sz)
+        return false;
+
+    const QByteArray cid(header.chunkId, 4);
+    const QByteArray format(header.format, 4);
+    const QByteArray subCid(header.subChunk1Id, 4);
+
+    if (cid != "RIFF" || format != "WAVE" || subCid != "fmt " ||
+        header.subChunk1Size != 16 || header.audioFormat != 1) {
+        qWarning() << "PcmSound: Invalid sound format. " << url.toLocalFile();
+        return false;
+    }
+
+    m_channels = header.numChannels;
+    m_sampleRate = header.sampleRate;
 
     m_data = fp.readAll();
     return true;
