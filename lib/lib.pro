@@ -6,10 +6,12 @@ QT += declarative
 
 HEADERS += plugin.h \
            sprite.h \
+           pixmaptext.h \
            rawconnection.h
 
 SOURCES += plugin.cpp \
            sprite.cpp \
+           pixmaptext.cpp \
            rawconnection.cpp
 
 QML_SOURCES += qmldir
