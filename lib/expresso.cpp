@@ -17,20 +17,28 @@
 **
 ****************************************************************************/
 
-#ifndef PLUGIN_H
-#define PLUGIN_H
+#include "expresso.h"
 
-#include <QDeclarativeEngine>
-#include <QDeclarativeExtensionPlugin>
+#include <QDir>
+#include <QFileInfoList>
 
 
-class ExpressoPlugin : public QDeclarativeExtensionPlugin
+Expresso::Expresso(QObject *parent)
+    : QObject(parent)
 {
-    Q_OBJECT
 
-public:
-    void registerTypes(const char *uri);
-    void initializeEngine(QDeclarativeEngine *engine, const char *uri);
-};
+}
 
-#endif
+QVariantList Expresso::listDirFiles(const QUrl &url, const QString &nameFilter) const
+{
+    QDir dir(url.toLocalFile());
+    dir.setFilter(QDir::Files | QDir::Hidden);
+
+    QVariantList result;
+    const QFileInfoList &list = dir.entryInfoList(QStringList(nameFilter));
+
+    foreach (const QFileInfo &info, list)
+        result.append(QUrl::fromLocalFile(info.absoluteFilePath()));
+
+    return result;
+}

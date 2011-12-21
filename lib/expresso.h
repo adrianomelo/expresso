@@ -17,20 +17,22 @@
 **
 ****************************************************************************/
 
-#ifndef PLUGIN_H
-#define PLUGIN_H
+#ifndef EXPRESSO_H
+#define EXPRESSO_H
 
-#include <QDeclarativeEngine>
-#include <QDeclarativeExtensionPlugin>
+#include <QUrl>
+#include <QObject>
+#include <QVariantList>
 
 
-class ExpressoPlugin : public QDeclarativeExtensionPlugin
+class Expresso : public QObject
 {
     Q_OBJECT
 
 public:
-    void registerTypes(const char *uri);
-    void initializeEngine(QDeclarativeEngine *engine, const char *uri);
+    Expresso(QObject *parent = 0);
+
+    Q_INVOKABLE QVariantList listDirFiles(const QUrl &url, const QString &nameFilter) const;
 };
 
 #endif

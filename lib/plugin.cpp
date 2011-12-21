@@ -19,8 +19,11 @@
 
 #include "plugin.h"
 #include "sprite.h"
+#include "expresso.h"
 #include "pixmaptext.h"
 #include "rawconnection.h"
+
+#include <QDeclarativeContext>
 
 
 void ExpressoPlugin::registerTypes(const char *uri)
@@ -32,5 +35,13 @@ void ExpressoPlugin::registerTypes(const char *uri)
     qmlRegisterType<PixmapText>(uri, 1, 0, "PixmapText");
     qmlRegisterType<RawConnection>(uri, 1, 0, "RawConnection");
 }
+
+void ExpressoPlugin::initializeEngine(QDeclarativeEngine *engine, const char *uri)
+{
+    Q_ASSERT(uri == QLatin1String("Expresso"));
+
+    engine->rootContext()->setContextProperty("Expresso", new Expresso(this));
+}
+
 
 Q_EXPORT_PLUGIN2(expressoplugin, ExpressoPlugin);
