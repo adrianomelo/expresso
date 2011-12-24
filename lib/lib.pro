@@ -9,6 +9,7 @@ HEADERS += plugin.h \
            expresso.h \
            pcmsound.h \
            pixmaptext.h \
+           particlesystem.h \
            rawconnection.h
 
 SOURCES += plugin.cpp \
@@ -16,6 +17,7 @@ SOURCES += plugin.cpp \
            expresso.cpp \
            pcmsound.cpp \
            pixmaptext.cpp \
+           particlesystem.cpp \
            rawconnection.cpp
 
 unix {

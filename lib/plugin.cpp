@@ -23,6 +23,7 @@
 #include "pcmsound.h"
 #include "pixmaptext.h"
 #include "rawconnection.h"
+#include "particlesystem.h"
 
 #include <QDeclarativeContext>
 
@@ -36,6 +37,7 @@ void ExpressoPlugin::registerTypes(const char *uri)
     qmlRegisterType<PcmSound>(uri, 1, 0, "PcmSound");
     qmlRegisterType<PixmapText>(uri, 1, 0, "PixmapText");
     qmlRegisterType<RawConnection>(uri, 1, 0, "RawConnection");
+    qmlRegisterType<ParticleSystem>(uri, 1, 0, "ParticleSystem");
 }
 
 void ExpressoPlugin::initializeEngine(QDeclarativeEngine *engine, const char *uri)
