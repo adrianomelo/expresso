@@ -157,10 +157,26 @@ void Sprite::paint(QPainter *painter, const QStyleOptionGraphicsItem *options, Q
     if (!m_state)
         return;
 
-    QRect dest = m_state->sourceRect();
     const QPixmap &pixmap = m_state->pixmap();
 
-    if (pixmap.isNull() || dest.isNull())
+    if (pixmap.isNull())
+        return;
+
+    if (!m_state->isTiled()) {
+        // paint frame
+        painter->save();
+        if (m_flip) {
+            painter->scale(-1, 1);
+            painter->translate(-width(), 0);
+        }
+        painter->drawPixmap(0, 0, pixmap);
+        painter->restore();
+        return;
+    }
+
+    QRect dest = m_state->sourceRect();
+
+    if (dest.isNull())
         return;
 
     // adjust target geometry
@@ -260,9 +276,29 @@ void SpriteState::setSource(const QUrl &source)
 {
     if (m_source != source) {
         m_source = source;
+        m_pixmaps.clear();
         m_pixmap = QPixmap(source.toLocalFile());
         emit sourceChanged();
     }
+}
+
+void SpriteState::setSources(const QVariantList &sources)
+{
+    if (m_sources == sources)
+        return;
+
+    m_pixmap = QPixmap();
+    m_pixmaps.clear();
+    m_sources = sources;
+
+    foreach (const QVariant &v, sources) {
+        const QUrl &url = v.toUrl();
+
+        if (url.isValid())
+            m_pixmaps << QPixmap(url.toLocalFile());
+    }
+
+    emit sourcesChanged();
 }
 
 SpriteState *SpriteState::nextState() const
@@ -330,4 +366,23 @@ bool SpriteState::advance()
     }
 
     return true;
+}
+
+bool SpriteState::isTiled() const
+{
+    return m_pixmaps.empty();
+}
+
+QPixmap SpriteState::pixmap() const
+{
+    if (isTiled())
+        return m_pixmap;
+    else {
+        const int idx = qFloor(m_frame);
+
+        if (idx < 0 || idx >= m_pixmaps.count())
+            return QPixmap();
+        else
+            return m_pixmaps.at(idx);
+    }
 }

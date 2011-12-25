@@ -34,6 +34,7 @@ class SpriteState : public QObject
     Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(int loopCount READ loopCount WRITE setLoopCount NOTIFY loopCountChanged)
     Q_PROPERTY(SpriteState *nextState READ nextState WRITE setNextState NOTIFY nextStateChanged)
+    Q_PROPERTY(QVariantList sources READ sources WRITE setSources NOTIFY sourcesChanged)
 
 public:
     SpriteState(QObject *parent = 0);
@@ -53,6 +54,9 @@ public:
     QUrl source() const;
     void setSource(const QUrl &source);
 
+    QVariantList sources() const { return m_sources; }
+    void setSources(const QVariantList &sources);
+
     int loopCount() const;
     void setLoopCount(int count);
 
@@ -63,6 +67,7 @@ signals:
     void activated();
     void deactivated();
     void sourceChanged();
+    void sourcesChanged();
     void loopCountChanged();
     void nextStateChanged();
     void frameRateChanged();
@@ -73,7 +78,8 @@ signals:
 protected:
     bool advance();
     QRect sourceRect() const;
-    QPixmap pixmap() const { return m_pixmap; }
+    bool isTiled() const;
+    QPixmap pixmap() const;
 
 private:
     QUrl m_source;
@@ -86,6 +92,8 @@ private:
     qreal m_frame;
     int m_loopCount;
     int m_currentLoop;
+    QVariantList m_sources;
+    QList<QPixmap> m_pixmaps;
 
     friend class Sprite;
 };
