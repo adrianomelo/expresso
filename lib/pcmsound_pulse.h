@@ -39,8 +39,13 @@ public:
     int loopCount() const;
     void setLoopCount(int loopCount);
 
+    bool isMuted() const { return m_muted; }
     void setMuted(bool muted);
+
     void setVolume(qreal value);
+
+    bool isPaused() const;
+    void setPaused(bool paused);
 
 signals:
     void finished();
@@ -70,6 +75,7 @@ private:
     int m_loopCount;
     int m_streamIndex;
     bool m_muted;
+    bool m_paused;
     qreal m_volume;
     QByteArray m_data;
     pa_stream *m_stream;

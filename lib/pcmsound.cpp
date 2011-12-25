@@ -88,21 +88,72 @@ bool WavFile::load(const QUrl &url)
 PcmSound::PcmSound(QObject *parent)
   : QObject(parent),
     m_sound(0),
-    m_loopCount(1)
+    m_loopCount(1),
+    m_muted(false),
+    m_paused(false),
+    m_doPlay(false),
+    m_completed(false)
 {
 
+}
+
+void PcmSound::componentComplete()
+{
+    m_completed = true;
+    updatePcmSound();
+
+    if (m_doPlay)
+        play();
 }
 
 void PcmSound::play()
 {
     if (m_sound)
         m_sound->play();
+
+    m_doPlay = true;
 }
 
 void PcmSound::stop()
 {
     if (m_sound)
         m_sound->stop();
+
+    m_doPlay = false;
+}
+
+bool PcmSound::isPaused() const
+{
+    return m_paused;
+}
+
+void PcmSound::setPaused(bool paused)
+{
+    if (m_paused == paused)
+        return;
+
+    m_paused = paused;
+    emit pausedChanged();
+
+    if (m_sound)
+        m_sound->setPaused(paused);
+}
+
+bool PcmSound::isMuted() const
+{
+    return m_muted;
+}
+
+void PcmSound::setMuted(bool muted)
+{
+    if (m_muted == muted)
+        return;
+
+    m_muted = muted;
+    emit mutedChanged();
+
+    if (m_sound)
+        m_sound->setMuted(muted);
 }
 
 QUrl PcmSound::source() const
@@ -112,26 +163,11 @@ QUrl PcmSound::source() const
 
 void PcmSound::setSource(const QUrl &url)
 {
-    if (m_source == url)
-        return;
-
-    m_source = url;
-
-    if (m_sound)
-        delete m_sound;
-
-    WavFile file;
-    file.load(url.toLocalFile());
-
-#ifdef PCMSOUND_PULSE
-    m_sound = new PulsePcmSound(file, this);
-#else
-    m_sound = new DummyPcmSound(file, this);
-#endif
-
-    m_sound->setLoopCount(m_loopCount);
-
-    emit sourceChanged();
+    if (m_source != url) {
+        m_source = url;
+        updatePcmSound();
+        emit sourceChanged();
+    }
 }
 
 int PcmSound::loopCount() const
@@ -145,9 +181,30 @@ void PcmSound::setLoopCount(int count)
         return;
 
     m_loopCount = count;
+    emit loopCountChanged();
 
     if (m_sound)
         m_sound->setLoopCount(count);
+}
 
-    emit loopCountChanged();
+void PcmSound::updatePcmSound()
+{
+    if (!m_completed)
+        return;
+
+    if (m_sound)
+        delete m_sound;
+
+    WavFile file;
+    file.load(m_source.toLocalFile());
+
+#ifdef PCMSOUND_PULSE
+    m_sound = new PulsePcmSound(file, this);
+#else
+    m_sound = new DummyPcmSound(file, this);
+#endif
+
+    m_sound->setMuted(m_muted);
+    m_sound->setPaused(m_paused);
+    m_sound->setLoopCount(m_loopCount);
 }

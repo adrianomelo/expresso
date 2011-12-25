@@ -166,6 +166,7 @@ PulsePcmSound::PulsePcmSound(const WavFile &file, QObject *parent)
       m_loopCount(1),
       m_streamIndex(-1),
       m_muted(false),
+      m_paused(false),
       m_volume(1),
       m_data(file.data()),
       m_stream(0)
@@ -203,6 +204,7 @@ void PulsePcmSound::play()
 {
     if (m_loopCount < 2)
         m_position = 0;
+
     m_playCount = m_loopCount;
     uploadSample();
 }
@@ -211,6 +213,24 @@ void PulsePcmSound::stop()
 {
     m_position = 0;
     m_playCount = 0;
+}
+
+bool PulsePcmSound::isPaused() const
+{
+    return m_paused;
+}
+
+void PulsePcmSound::setPaused(bool paused)
+{
+    if (m_paused != paused) {
+        m_paused = paused;
+
+        // XXX: reset pos if it's running
+        if (m_playCount > 1)
+            m_position = 0;
+
+        uploadSample();
+    }
 }
 
 int PulsePcmSound::loopCount() const
@@ -295,7 +315,10 @@ void PulsePcmSound::uploadSample()
     if (!m_ready || m_playCount == 0)
         return;
 
-    if (m_position == m_data.size()) {
+    if (m_paused)
+        return;
+
+    if (m_position >= m_data.size()) {
         m_position = 0;
         if (--m_playCount == 0) {
             QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
@@ -313,6 +336,10 @@ void PulsePcmSound::uploadSample()
         qWarning("PulsePcmSound: Unable to write to stream (%s)", pa_strerror(pa_context_errno(context)));
         return;
     }
+
+    // flush content
+    if (bufferLength < writableSize)
+        pa_stream_drain(m_stream, 0, 0);
 
     m_position += bufferLength;
 }

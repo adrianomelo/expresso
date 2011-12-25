@@ -41,6 +41,9 @@ public:
     void setMuted(bool) {}
     void setVolume(qreal) {}
 
+    bool isPaused() const { return false; }
+    void setPaused(bool) {}
+
 signals:
     void finished();
 

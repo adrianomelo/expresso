@@ -23,7 +23,7 @@
 #include <QUrl>
 #include <QObject>
 #include <QByteArray>
-
+#include <QDeclarativeParserStatus>
 
 class WavFile
 {
@@ -58,8 +58,13 @@ public:
     virtual int loopCount() const = 0;
     virtual void setLoopCount(int loopCount) = 0;
 
+    virtual bool isMuted() const = 0;
     virtual void setMuted(bool muted) = 0;
+
     virtual void setVolume(qreal value) = 0;
+
+    virtual bool isPaused() const = 0;
+    virtual void setPaused(bool paused) = 0;
 
 signals:
     void finished();
@@ -70,10 +75,15 @@ public slots:
 };
 
 
-class PcmSound : public QObject
+class PcmSound : public QObject,
+                 public QDeclarativeParserStatus
 {
     Q_OBJECT
+    Q_INTERFACES(QDeclarativeParserStatus)
+
     Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
+    Q_PROPERTY(bool muted READ isMuted WRITE setMuted NOTIFY mutedChanged)
+    Q_PROPERTY(bool paused READ isPaused WRITE setPaused NOTIFY pausedChanged)
     Q_PROPERTY(int loopCount READ loopCount WRITE setLoopCount NOTIFY loopCountChanged)
 
 public:
@@ -85,18 +95,35 @@ public:
     int loopCount() const;
     void setLoopCount(int count);
 
+    bool isPaused() const;
+    void setPaused(bool paused);
+
+    bool isMuted() const;
+    void setMuted(bool muted);
+
+    void classBegin() {}
+    void componentComplete();
+
 public slots:
     void play();
     void stop();
 
 signals:
+    void mutedChanged();
+    void pausedChanged();
     void sourceChanged();
     void loopCountChanged();
 
 private:
+    void updatePcmSound();
+
     AbstractPcmSound *m_sound;
     QUrl m_source;
     int m_loopCount;
+    bool m_muted;
+    bool m_paused;
+    bool m_doPlay;
+    bool m_completed;
 };
 
 #endif
