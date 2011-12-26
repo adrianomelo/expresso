@@ -18,6 +18,7 @@
 ****************************************************************************/
 
 #include "pixmaptext.h"
+#include "common.h"
 
 #include <QPainter>
 
@@ -41,7 +42,7 @@ void PixmapText::setSource(const QUrl &url)
 {
     if (m_source != url) {
         m_source = url;
-        m_pixmap = QPixmap(url.toLocalFile());
+        m_pixmap = loadPixmap(this, url);
         emit sourceChanged();
         updateGeometry();
     }

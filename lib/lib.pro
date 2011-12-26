@@ -6,6 +6,7 @@ QT += declarative
 
 HEADERS += plugin.h \
            sprite.h \
+           common.h \
            expresso.h \
            pcmsound.h \
            pixmaptext.h \
@@ -14,6 +15,7 @@ HEADERS += plugin.h \
            rawconnection.h
 
 SOURCES += plugin.cpp \
+           common.cpp \
            sprite.cpp \
            expresso.cpp \
            pcmsound.cpp \

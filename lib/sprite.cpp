@@ -18,9 +18,11 @@
 ****************************************************************************/
 
 #include "sprite.h"
+#include "common.h"
 #include <QPainter>
 #include <QGraphicsScene>
 #include <qmath.h>
+
 
 const int q_spriteSceneTick = 30;
 
@@ -277,7 +279,7 @@ void SpriteState::setSource(const QUrl &source)
     if (m_source != source) {
         m_source = source;
         m_pixmaps.clear();
-        m_pixmap = QPixmap(source.toLocalFile());
+        m_pixmap = loadPixmap(this, source);
         emit sourceChanged();
     }
 }
@@ -295,7 +297,7 @@ void SpriteState::setSources(const QVariantList &sources)
         const QUrl &url = v.toUrl();
 
         if (url.isValid())
-            m_pixmaps << QPixmap(url.toLocalFile());
+            m_pixmaps << loadPixmap(this, url);
     }
 
     emit sourcesChanged();

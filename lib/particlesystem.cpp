@@ -18,6 +18,7 @@
 ****************************************************************************/
 
 #include "particlesystem.h"
+#include "common.h"
 #include <QPainter>
 
 
@@ -137,7 +138,7 @@ void ParticleSystem::setSources(const QVariantList &sources)
         const QUrl &url = v.toUrl();
 
         if (url.isValid())
-            m_pixmaps << QPixmap(url.toLocalFile());
+            m_pixmaps << loadPixmap(this, url);
     }
 
     emit sourcesChanged();
