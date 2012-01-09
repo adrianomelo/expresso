@@ -395,4 +395,4 @@ void PulsePcmSound::stream_overflow_callback(pa_stream *stream, void *userData)
     Q_UNUSED(userData);
 }
 
-#include "wavsound_pulse.moc"
+#include "pcmsound_pulse.moc"
