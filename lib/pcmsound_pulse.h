@@ -23,44 +23,42 @@
 #include "pcmsound.h"
 
 #include <QObject>
-#include <QByteArray>
 #include <pulse/pulseaudio.h>
 
-struct pa_stream;
 
 class PulsePcmSound : public AbstractPcmSound
 {
     Q_OBJECT
 
 public:
-    PulsePcmSound(const WavFile &file, QObject *parent = 0);
+    PulsePcmSound(QObject *parent = 0);
     ~PulsePcmSound();
 
-    int loopCount() const;
+    QUrl source() const { return m_source; }
+    void setSource(const QUrl &url);
+
+    bool isPlaying() const { return m_isPlaying; }
+    void setPlaying(bool playing);
+
+    int loopCount() const { return m_loopCount; }
     void setLoopCount(int loopCount);
 
-    bool isMuted() const { return m_muted; }
-    void setMuted(bool muted);
-
-    void setVolume(qreal value);
-
-    bool isPaused() const;
+    bool isPaused() const { return m_isPaused; }
     void setPaused(bool paused);
 
-signals:
-    void finished();
+    bool isMuted() const { return m_isMuted; }
+    void setMuted(bool muted);
 
-public slots:
-    void play();
-    void stop();
+    qreal volume() const { return m_volume; }
+    void setVolume(qreal value);
 
 protected slots:
-    void onContextReady();
+    void createStream();
+    void deleteStream();
+    void updateVolume();
 
 protected:
-    void createStream();
     void uploadSample();
-    void updateVolume();
 
     static void stream_state_callback(pa_stream *stream, void *userData);
     static void stream_write_callback(pa_stream *stream, size_t length, void *userData);
@@ -69,17 +67,21 @@ protected:
     static void stream_overflow_callback(pa_stream *stream, void *userData);
 
 private:
-    bool m_ready;
+    bool m_isReady;
     int m_position;
     int m_playCount;
     int m_loopCount;
     int m_streamIndex;
-    bool m_muted;
-    bool m_paused;
+    bool m_isMuted;
+    bool m_isPaused;
     qreal m_volume;
+    bool m_isPlaying;
+    QUrl m_source;
     QByteArray m_data;
     pa_stream *m_stream;
     pa_sample_spec m_sampleSpec;
 };
+
+typedef PulsePcmSound PcmSound;
 
 #endif

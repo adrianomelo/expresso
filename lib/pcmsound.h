@@ -25,6 +25,7 @@
 #include <QByteArray>
 #include <QDeclarativeParserStatus>
 
+
 class WavFile
 {
 public:
@@ -47,83 +48,60 @@ private:
 };
 
 
-class AbstractPcmSound : public QObject
+class AbstractPcmSound : public QObject,
+                         public QDeclarativeParserStatus
 {
     Q_OBJECT
+    Q_ENUMS(Loops)
+    Q_INTERFACES(QDeclarativeParserStatus)
+
+    Q_PROPERTY(bool playing READ isPlaying NOTIFY playingChanged)
+    Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
+    Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
+    Q_PROPERTY(bool muted READ isMuted WRITE setMuted NOTIFY mutedChanged)
+    Q_PROPERTY(bool paused READ isPaused WRITE setPaused NOTIFY pausedChanged)
+    Q_PROPERTY(int loops READ loopCount WRITE setLoopCount NOTIFY loopsChanged)
 
 public:
-    AbstractPcmSound(const WavFile &file, QObject *parent = 0)
-        : QObject(parent) { Q_UNUSED(file); }
+    enum Loops {
+        Infinite = -2
+    };
+
+    AbstractPcmSound(QObject *parent = 0)
+        : QObject(parent) {}
+
+    virtual QUrl source() const = 0;
+    virtual void setSource(const QUrl &url) = 0;
+
+    virtual bool isPlaying() const = 0;
+    virtual void setPlaying(bool playing) = 0;
 
     virtual int loopCount() const = 0;
-    virtual void setLoopCount(int loopCount) = 0;
-
-    virtual bool isMuted() const = 0;
-    virtual void setMuted(bool muted) = 0;
-
-    virtual void setVolume(qreal value) = 0;
+    virtual void setLoopCount(int count) = 0;
 
     virtual bool isPaused() const = 0;
     virtual void setPaused(bool paused) = 0;
 
-signals:
-    void finished();
+    virtual bool isMuted() const = 0;
+    virtual void setMuted(bool muted) = 0;
 
-public slots:
-    virtual void play() = 0;
-    virtual void stop() = 0;
-};
-
-
-class PcmSound : public QObject,
-                 public QDeclarativeParserStatus
-{
-    Q_OBJECT
-    Q_INTERFACES(QDeclarativeParserStatus)
-
-    Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
-    Q_PROPERTY(bool muted READ isMuted WRITE setMuted NOTIFY mutedChanged)
-    Q_PROPERTY(bool paused READ isPaused WRITE setPaused NOTIFY pausedChanged)
-    Q_PROPERTY(int loopCount READ loopCount WRITE setLoopCount NOTIFY loopCountChanged)
-
-public:
-    PcmSound(QObject *parent = 0);
-
-    QUrl source() const;
-    void setSource(const QUrl &url);
-
-    int loopCount() const;
-    void setLoopCount(int count);
-
-    bool isPaused() const;
-    void setPaused(bool paused);
-
-    bool isMuted() const;
-    void setMuted(bool muted);
+    virtual qreal volume() const = 0;
+    virtual void setVolume(qreal volume) = 0;
 
     void classBegin() {}
-    void componentComplete();
+    void componentComplete() {}
 
 public slots:
-    void play();
-    void stop();
+    void play() { setPlaying(true); }
+    void stop() { setPlaying(false); }
 
 signals:
     void mutedChanged();
     void pausedChanged();
     void sourceChanged();
-    void loopCountChanged();
-
-private:
-    void updatePcmSound();
-
-    AbstractPcmSound *m_sound;
-    QUrl m_source;
-    int m_loopCount;
-    bool m_muted;
-    bool m_paused;
-    bool m_doPlay;
-    bool m_completed;
+    void volumeChanged();
+    void playingChanged();
+    void loopsChanged();
 };
 
 #endif

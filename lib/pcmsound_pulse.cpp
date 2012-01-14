@@ -20,7 +20,6 @@
 #include <QFile>
 #include <QCoreApplication>
 
-
 #include "pcmsound_pulse.h"
 
 
@@ -32,14 +31,12 @@ public:
     PulseClient();
     ~PulseClient();
 
-    bool isReady() const { return m_ready; }
+    bool isReady() const { return m_isReady; }
 
     void lock() { pa_threaded_mainloop_lock(m_loop); }
     void unlock() { pa_threaded_mainloop_unlock(m_loop); }
 
     pa_context *context() const { return m_context; }
-    pa_mainloop_api *mainloopApi() const { return m_mainloopApi; }
-    const pa_sample_spec *sampleSpec() const { return &m_sampleSpec; }
 
 signals:
     void ready();
@@ -47,9 +44,8 @@ signals:
 private:
     static void context_state_callback(pa_context *context, void *userData);
 
-    bool m_ready;
+    bool m_isReady;
     pa_context *m_context;
-    pa_sample_spec m_sampleSpec;
     pa_threaded_mainloop *m_loop;
     pa_mainloop_api *m_mainloopApi;
 };
@@ -67,23 +63,15 @@ public:
 
 PulseClient::PulseClient()
     : QObject(),
-      m_ready(false),
+      m_isReady(false),
       m_context(0),
       m_loop(0),
       m_mainloopApi(0)
 {
-    m_sampleSpec.channels = 1;
-    m_sampleSpec.rate = 16000;
-    m_sampleSpec.format = pa_parse_sample_format("s16le");
+    m_loop = pa_threaded_mainloop_new();
 
-    if (!pa_sample_spec_valid(&m_sampleSpec)) {
-        qWarning("PulsePcmSound: Invalid sample spec");
-        qApp->quit();
-        return;
-    }
-
-    if (!(m_loop = pa_threaded_mainloop_new())) {
-        qWarning("PulsePcmSound: Unable to create threaded mainloop");
+    if (!m_loop) {
+        qWarning("PcmSound(pulse): Unable to create threaded mainloop");
         qApp->quit();
         return;
     }
@@ -94,8 +82,10 @@ PulseClient::PulseClient()
 
     const char *clientName = QString("PulseClient:%1").arg(::getpid()).toAscii().data();
 
-    if (!(m_context = pa_context_new(m_mainloopApi, clientName))) {
-        qWarning("PulsePcmSound: Unable to create context");
+    m_context = pa_context_new(m_mainloopApi, clientName);
+
+    if (!m_context) {
+        qWarning("PcmSound(pulse): Unable to create context");
         qApp->quit();
         return;
     }
@@ -104,14 +94,14 @@ PulseClient::PulseClient()
 
     // connect context
     if (pa_context_connect(m_context, 0, (pa_context_flags_t)0, 0) < 0) {
-        qWarning("PulsePcmSound: Unable to connect to context (%s)",
+        qWarning("PcmSound(pulse): Unable to connect to context (%s)",
                  pa_strerror(pa_context_errno(m_context)));
         qApp->quit();
         return;
     }
 
     if (pa_threaded_mainloop_start(m_loop) != 0)
-        qWarning("PulsePcmSound: Unable to start threaded mainloop");
+        qWarning("PcmSound(pulse): Unable to start threaded mainloop");
 }
 
 PulseClient::~PulseClient()
@@ -141,7 +131,7 @@ void PulseClient::context_state_callback(pa_context *c, void *userData)
         break;
 
     case PA_CONTEXT_READY:
-        pulse->m_ready = true;
+        pulse->m_isReady = true;
         emit pulse->ready();
         break;
 
@@ -151,113 +141,127 @@ void PulseClient::context_state_callback(pa_context *c, void *userData)
 
     case PA_CONTEXT_FAILED:
     default:
-        qWarning("PulseClientAudio: Connection failure (%s)", pa_strerror(pa_context_errno(c)));
+        qWarning("PcmSound(pulse): Connection failure (%s)", pa_strerror(pa_context_errno(c)));
         qApp->quit();
         break;
     }
 }
 
 
-PulsePcmSound::PulsePcmSound(const WavFile &file, QObject *parent)
-    : AbstractPcmSound(file, parent),
-      m_ready(false),
+PulsePcmSound::PulsePcmSound(QObject *parent)
+    : AbstractPcmSound(parent),
+      m_isReady(false),
       m_position(0),
       m_playCount(0),
       m_loopCount(1),
       m_streamIndex(-1),
-      m_muted(false),
-      m_paused(false),
+      m_isMuted(false),
+      m_isPaused(false),
       m_volume(1),
-      m_data(file.data()),
+      m_isPlaying(false),
       m_stream(0)
 {
-    PulseClient *pulse = pulse_instance();
-
-    m_sampleSpec.channels = file.channels();
-    m_sampleSpec.rate = file.sampleRate();
-    m_sampleSpec.format = pa_parse_sample_format("s16le");
-
-    if (pulse->isReady())
-        onContextReady();
-    else
-        connect(pulse, SIGNAL(ready()), this, SLOT(onContextReady()));
+    connect(pulse_instance(), SIGNAL(ready()), this, SLOT(createStream()));
 }
 
 PulsePcmSound::~PulsePcmSound()
 {
-    PulseLocker locker;
+    deleteStream();
+}
 
-    if (m_stream) {
-        pa_stream_set_state_callback(m_stream, 0, 0);
-        pa_stream_set_write_callback(m_stream, 0, 0);
-        pa_stream_set_suspended_callback(m_stream, 0, 0);
-        pa_stream_set_underflow_callback(m_stream, 0, 0);
-        pa_stream_set_overflow_callback(m_stream,  0, 0);
+void PulsePcmSound::setSource(const QUrl &url)
+{
+    if (m_source == url)
+        return;
 
-        pa_stream_disconnect(m_stream);
-        pa_stream_unref(m_stream);
-        m_stream = 0;
+    m_source = url;
+    emit sourceChanged();
+
+    deleteStream();
+
+    WavFile file;
+
+    if (!file.load(url.toLocalFile())) {
+        m_data = QByteArray();
+        qWarning("PcmSound(pulse): Unable to load file '%s'",
+                 url.toLocalFile().toLatin1().data());
+        return;
     }
+
+    m_data = file.data();
+    m_sampleSpec.channels = file.channels();
+    m_sampleSpec.rate = file.sampleRate();
+    m_sampleSpec.format = pa_parse_sample_format("s16le"); // XXX: get from file
+
+    if (pulse_instance()->isReady())
+        createStream();
 }
 
-void PulsePcmSound::play()
+void PulsePcmSound::setPlaying(bool playing)
 {
-    if (m_loopCount < 2)
-        m_position = 0;
+    if (m_isPlaying == playing)
+        return;
 
-    m_playCount = m_loopCount;
-    uploadSample();
-}
-
-void PulsePcmSound::stop()
-{
     m_position = 0;
-    m_playCount = 0;
-}
+    m_isPlaying = playing;
+    emit playingChanged();
 
-bool PulsePcmSound::isPaused() const
-{
-    return m_paused;
-}
-
-void PulsePcmSound::setPaused(bool paused)
-{
-    if (m_paused != paused) {
-        m_paused = paused;
-
-        // XXX: reset pos if it's running
-        if (m_playCount > 1)
-            m_position = 0;
-
+    if (!playing) {
+        m_playCount = 0;
+    } else {
+        m_playCount = m_loopCount;
         uploadSample();
     }
 }
 
-int PulsePcmSound::loopCount() const
+void PulsePcmSound::setPaused(bool paused)
 {
-    return m_loopCount;
+    if (m_isPaused == paused)
+        return;
+
+    m_isPaused = paused;
+    emit pausedChanged();
+
+    if (!paused)
+        uploadSample();
 }
 
 void PulsePcmSound::setLoopCount(int loopCount)
 {
+    if (m_loopCount == loopCount)
+        return;
+
     m_loopCount = loopCount;
+    emit loopsChanged();
 }
 
 void PulsePcmSound::setVolume(qreal volume)
 {
+    volume = qBound<qreal>(0.0, volume, 1.0);
+
+    if (m_volume == volume)
+        return;
+
     m_volume = volume;
+    emit volumeChanged();
+
     updateVolume();
 }
 
 void PulsePcmSound::setMuted(bool muted)
 {
-    m_muted = muted;
+    if (m_isMuted == muted)
+        return;
+
+    m_isMuted = muted;
+    emit mutedChanged();
+
     updateVolume();
 }
 
 void PulsePcmSound::updateVolume()
 {
-    if (m_streamIndex < 0)
+    if (!m_isReady)
         return;
 
     PulseClient *pulse = pulse_instance();
@@ -265,33 +269,32 @@ void PulsePcmSound::updateVolume()
     PulseLocker locker;
 
     pa_cvolume volume;
-    volume.channels = pulse->sampleSpec()->channels;
+    volume.channels = m_sampleSpec.channels;
 
     for (int i = 0; i < volume.channels; ++i)
-        volume.values[i] = m_muted ? PA_VOLUME_MUTED : PA_VOLUME_NORM * m_volume;
+        volume.values[i] = m_isMuted ? PA_VOLUME_MUTED : PA_VOLUME_NORM * m_volume;
 
     pa_operation_unref(pa_context_set_sink_input_volume(pulse->context(), m_streamIndex, &volume, 0, 0));
 }
 
-void PulsePcmSound::onContextReady()
-{
-    disconnect(pulse_instance(), SIGNAL(ready()), this, SLOT(onContextReady()));
-
-    createStream();
-    uploadSample();
-}
-
 void PulsePcmSound::createStream()
 {
+    if (m_stream || m_data.isEmpty())
+        return;
+
     PulseClient *pulse = pulse_instance();
     pa_context *context = pulse->context();
 
     PulseLocker locker;
     const char *streamName = QString("PulsePcmSound:%1").arg(::getpid()).toAscii().data();
 
+    if (!pa_sample_spec_valid(&m_sampleSpec)) {
+        qWarning("PcmSound(pulse): Invalid sample spec");
+        return;
+    }
+
     if (!(m_stream = pa_stream_new(context, streamName, &m_sampleSpec, 0))) {
-        qWarning("PulsePcmSound: Unable to create stream (%s)", pa_strerror(pa_context_errno(context)));
-        qApp->quit();
+        qWarning("PcmSound(pulse): Unable to create stream (%s)", pa_strerror(pa_context_errno(context)));
         return;
     }
 
@@ -302,27 +305,49 @@ void PulsePcmSound::createStream()
     pa_stream_set_overflow_callback(m_stream, stream_overflow_callback, this);
 
     if (pa_stream_connect_playback(m_stream, 0, 0, (pa_stream_flags_t)0, 0, 0) < 0) {
-        qWarning("PulsePcmSound: Unable to connect playback (%s)", pa_strerror(pa_context_errno(context)));
-        qApp->quit();
+        qWarning("PcmSound(pulse): Unable to connect playback (%s)", pa_strerror(pa_context_errno(context)));
         return;
     }
+}
 
-    updateVolume();
+void PulsePcmSound::deleteStream()
+{
+    if (!m_stream)
+        return;
+
+    PulseLocker locker;
+
+    pa_stream_set_state_callback(m_stream, 0, 0);
+    pa_stream_set_write_callback(m_stream, 0, 0);
+    pa_stream_set_suspended_callback(m_stream, 0, 0);
+    pa_stream_set_underflow_callback(m_stream, 0, 0);
+    pa_stream_set_overflow_callback(m_stream,  0, 0);
+
+    pa_stream_disconnect(m_stream);
+    pa_stream_unref(m_stream);
+
+    m_stream = 0;
+    m_isReady = false;
+    m_position = 0;
+    m_playCount = 0;
+    m_streamIndex = -1;
 }
 
 void PulsePcmSound::uploadSample()
 {
-    if (!m_ready || m_playCount == 0)
-        return;
-
-    if (m_paused)
+    if (!m_isReady || m_isPaused || m_playCount == 0)
         return;
 
     if (m_position >= m_data.size()) {
         m_position = 0;
-        if (--m_playCount == 0) {
-            QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
-            return;
+
+        // It's Infinite when playCount is negative.
+        if (m_playCount > 0) {
+            m_playCount--;
+            if (m_playCount == 0) {
+                setPlaying(false);
+                return;
+            }
         }
     }
 
@@ -333,7 +358,7 @@ void PulsePcmSound::uploadSample()
 
     if (pa_stream_write(m_stream, reinterpret_cast<uint8_t *>(m_data.data()) + m_position,
                         bufferLength, 0, 0, PA_SEEK_RELATIVE) < 0) {
-        qWarning("PulsePcmSound: Unable to write to stream (%s)", pa_strerror(pa_context_errno(context)));
+        qWarning("PcmSound(pulse): Unable to write to stream (%s)", pa_strerror(pa_context_errno(context)));
         return;
     }
 
@@ -363,16 +388,19 @@ void PulsePcmSound::stream_state_callback(pa_stream *stream, void *userData)
         break;
 
     case PA_STREAM_READY:
-        sound->m_ready = true;
+        sound->m_isReady = true;
         sound->m_streamIndex = pa_stream_get_index(stream);
         sound->uploadSample();
+        // Adjust volume out of this callback since it's a locking operation
+        QMetaObject::invokeMethod(sound, "updateVolume", Qt::QueuedConnection);
         break;
 
     case PA_STREAM_FAILED:
     default:
-        qWarning("PulsePcmSound: Stream error (%s)",
+        qWarning("PcmSound(pulse): Stream error (%s)",
                  pa_strerror(pa_context_errno(pa_stream_get_context(stream))));
-        qApp->quit();
+        sound->m_isReady = false;
+        sound->m_streamIndex = -1;
         break;
     }
 }

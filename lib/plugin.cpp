@@ -20,13 +20,18 @@
 #include "plugin.h"
 #include "sprite.h"
 #include "expresso.h"
-#include "pcmsound.h"
 #include "settings.h"
 #include "pixmaptext.h"
 #include "imageloader.h"
 #include "particlesystem.h"
 
 #include <QDeclarativeContext>
+
+#ifdef PCMSOUND_PULSE
+#  include "pcmsound_pulse.h"
+#else
+#  include "pcmsound_dummy.h"
+#endif
 
 
 void ExpressoPlugin::registerTypes(const char *uri)
