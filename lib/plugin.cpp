@@ -24,7 +24,6 @@
 #include "settings.h"
 #include "pixmaptext.h"
 #include "imageloader.h"
-#include "rawconnection.h"
 #include "particlesystem.h"
 
 #include <QDeclarativeContext>
@@ -40,7 +39,6 @@ void ExpressoPlugin::registerTypes(const char *uri)
     qmlRegisterType<Settings>(uri, 1, 0, "Settings");
     qmlRegisterType<PixmapText>(uri, 1, 0, "PixmapText");
     qmlRegisterType<ImageLoader>(uri, 1, 0, "ImageLoader");
-    qmlRegisterType<RawConnection>(uri, 1, 0, "RawConnection");
     qmlRegisterType<ParticleSystem>(uri, 1, 0, "ParticleSystem");
 }
 

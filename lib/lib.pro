@@ -12,8 +12,7 @@ HEADERS += plugin.h \
            pcmsound.h \
            pixmaptext.h \
            particlesystem.h \
-           imageloader.h \
-           rawconnection.h
+           imageloader.h
 
 SOURCES += plugin.cpp \
            common.cpp \
@@ -23,8 +22,7 @@ SOURCES += plugin.cpp \
            pcmsound.cpp \
            pixmaptext.cpp \
            particlesystem.cpp \
-           imageloader.cpp \
-           rawconnection.cpp
+           imageloader.cpp
 
 unix {
     CONFIG += link_pkgconfig
