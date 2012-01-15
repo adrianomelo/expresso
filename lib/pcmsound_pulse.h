@@ -60,6 +60,8 @@ protected slots:
 protected:
     void uploadSample();
 
+    static pa_sample_format sampleFormat(WavFile::Format format);
+
     static void stream_state_callback(pa_stream *stream, void *userData);
     static void stream_write_callback(pa_stream *stream, size_t length, void *userData);
     static void stream_suspended_callback(pa_stream *stream, void *userData);

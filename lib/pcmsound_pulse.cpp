@@ -191,10 +191,26 @@ void PulsePcmSound::setSource(const QUrl &url)
     m_data = file.data();
     m_sampleSpec.channels = file.channels();
     m_sampleSpec.rate = file.sampleRate();
-    m_sampleSpec.format = pa_parse_sample_format("s16le"); // XXX: get from file
+    m_sampleSpec.format = sampleFormat(file.format());
 
     if (pulse_instance()->isReady())
         createStream();
+}
+
+pa_sample_format PulsePcmSound::sampleFormat(WavFile::Format format)
+{
+    switch (format) {
+    case WavFile::U8:
+        return PA_SAMPLE_U8;
+    case WavFile::S16LE:
+        return PA_SAMPLE_S16LE;
+    case WavFile::S24LE:
+        return PA_SAMPLE_S24LE;
+    case WavFile::S32LE:
+        return PA_SAMPLE_S32LE;
+    default:
+        return PA_SAMPLE_INVALID;
+    }
 }
 
 void PulsePcmSound::setPlaying(bool playing)

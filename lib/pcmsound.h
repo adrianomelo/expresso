@@ -29,6 +29,14 @@
 class WavFile
 {
 public:
+    enum Format {
+        Invalid,
+        U8,
+        S16LE,
+        S24LE,
+        S32LE,
+    };
+
     WavFile();
 
     bool isLoaded() const { return m_loaded; }
@@ -36,6 +44,8 @@ public:
 
     int channels() const { return m_channels; }
     int sampleRate() const { return m_sampleRate; }
+    Format format() const { return m_format; }
+
 
     bool load(const QUrl &url);
 
@@ -45,6 +55,7 @@ private:
     QByteArray m_data;
     int m_channels;
     int m_sampleRate;
+    Format m_format;
 };
 
 

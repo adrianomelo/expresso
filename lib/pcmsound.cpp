@@ -26,7 +26,8 @@
 WavFile::WavFile()
     : m_loaded(false),
       m_channels(1),
-      m_sampleRate(16000)
+      m_sampleRate(16000),
+      m_format(Invalid)
 {
 
 }
@@ -48,7 +49,7 @@ bool WavFile::load(const QUrl &url)
         char format[4];
         char subChunk1Id[4];
         quint32 subChunk1Size;
-        quint16 audioFormat;
+        qint16 audioFormat;
         quint16 numChannels;
         quint32 sampleRate;
         quint32 byteRate;
@@ -66,10 +67,30 @@ bool WavFile::load(const QUrl &url)
     const QByteArray format(header.format, 4);
     const QByteArray subCid(header.subChunk1Id, 4);
 
-    if (cid != "RIFF" || format != "WAVE" || subCid != "fmt " ||
-        header.subChunk1Size != 16 || header.audioFormat != 1) {
+    const bool validChunk = (header.subChunk1Size == 16 && header.audioFormat == 1) ||
+        (header.subChunk1Size == 40 && header.audioFormat == -2);
+
+    if (cid != "RIFF" || format != "WAVE" || subCid != "fmt " || !validChunk) {
         qWarning() << "PcmSound: Invalid sound format. " << url.toLocalFile();
         return false;
+    }
+
+    switch (header.bitsPerSample) {
+    case 8:
+        m_format = WavFile::U8;
+        break;
+    case 16:
+        m_format = WavFile::S16LE;
+        break;
+    case 24:
+        m_format = WavFile::S24LE;
+        break;
+    case 32:
+        m_format = WavFile::S32LE;
+        break;
+    default:
+        m_format = WavFile::Invalid;
+        break;
     }
 
     m_channels = header.numChannels;
